@@ -56,36 +56,37 @@ export default function Scanner() {
     setProcessing(true);
 
     try {
-      // Look up person by qrString
+      // Look up person by qrString - load all people for user, filter by qrString
       const pSnap = await getDocs(
         query(
           collection(db, 'people'),
-          where('qrString', '==', decoded),
           where('userId', '==', currentUser.uid)
         )
       );
-
-      if (pSnap.empty) {
+      
+      const personDoc = pSnap.docs.find(d => d.data().qrString === decoded);
+      if (!personDoc) {
         toast.error('QR code inconnu ou ne vous appartient pas.');
         setProcessing(false);
         return;
       }
 
-      const personDoc = pSnap.docs[0];
       const person    = { id: personDoc.id, ...personDoc.data() };
       const today     = todayStr();
 
-      // Check if already has an open "arrived" log today
+      // Check if already has logs today for this person
       const logSnap = await getDocs(
         query(
           collection(db, 'attendanceLogs'),
           where('personId', '==', person.id),
-          where('date', '==', today),
-          where('status', '==', 'arrived')
+          where('date', '==', today)
         )
       );
+      
+      // Find if there's an "arrived" status log
+      const arrivedLog = logSnap.docs.find(d => d.data().status === 'arrived');
 
-      if (logSnap.empty) {
+      if (!arrivedLog) {
         // First scan today → record arrival
         await addDoc(collection(db, 'attendanceLogs'), {
           personId:  person.id,
@@ -100,7 +101,7 @@ export default function Scanner() {
         toast.success(`✅ Arrivée enregistrée : ${person.firstName} ${person.lastName}`);
       } else {
         // Already arrived → record departure
-        const logDoc = logSnap.docs[0];
+        const logDoc = arrivedLog;
         await updateDoc(doc(db, 'attendanceLogs', logDoc.id), {
           departureTime: timeStr(),
           status: 'departed',
@@ -109,8 +110,8 @@ export default function Scanner() {
         toast.success(`🚪 Départ enregistré : ${person.firstName} ${person.lastName}`);
       }
     } catch (err) {
-      console.error(err);
-      toast.error('Erreur lors du traitement du QR code.');
+      console.error('Scanner error:', err);
+      toast.error('Erreur lors du traitement du QR code: ' + err.message);
     } finally {
       setProcessing(false);
     }

@@ -41,7 +41,7 @@ export default function Groups() {
       });
       setGroups(data);
     } catch (e) {
-      console.error(e);
+      console.error('Groups load error:', e);
       toast.error('Erreur de chargement');
     } finally {
       setLoading(false);
@@ -113,7 +113,8 @@ export default function Groups() {
       toast.success('Groupe supprimé');
       load();
     } catch (err) {
-      toast.error('Erreur lors de la suppression');
+      console.error('Delete error:', err);
+      toast.error('Erreur lors de la suppression: ' + err.message);
     }
   };
 

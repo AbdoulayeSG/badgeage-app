@@ -51,21 +51,22 @@ export default function People() {
       const snap = await getDocs(q);
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Fetch today's presence
+      // Fetch today's presence - load all logs for today, filter by status
       const logsSnap = await getDocs(
         query(
           collection(db, 'attendanceLogs'),
           where('userId', '==', currentUser.uid),
-          where('date', '==', today()),
-          where('status', '==', 'arrived')
+          where('date', '==', today())
         )
       );
-      const presentSet = new Set(logsSnap.docs.map(d => d.data().personId));
+      const presentSet = new Set(logsSnap.docs
+        .filter(d => d.data().status === 'arrived')
+        .map(d => d.data().personId));
 
       setPeople(list);
       setPresent(presentSet);
     } catch (e) {
-      console.error(e);
+      console.error('People load error:', e);
       toast.error('Erreur de chargement');
     } finally {
       setLoading(false);
