@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   collection, query, where, getDocs, addDoc, deleteDoc,
-  doc, serverTimestamp, orderBy,
+  doc, serverTimestamp,
 } from 'firebase/firestore';
 import { QRCodeCanvas } from 'qrcode.react';
 import toast from 'react-hot-toast';
@@ -46,8 +46,7 @@ export default function People() {
       const q = query(
         collection(db, 'people'),
         where('userId', '==', currentUser.uid),
-        ...(groupId ? [where('groupId', '==', groupId)] : []),
-        orderBy('createdAt', 'desc')
+        ...(groupId ? [where('groupId', '==', groupId)] : [])
       );
       const snap = await getDocs(q);
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));

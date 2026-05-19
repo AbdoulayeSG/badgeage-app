@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import {
-  collection, query, where, getDocs, orderBy,
+  collection, query, where, getDocs,
 } from 'firebase/firestore';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -38,16 +38,17 @@ export default function Statistics() {
           collection(db, 'attendanceLogs'),
           where('userId', '==', currentUser.uid),
           where('date', '>=', startDate),
-          where('date', '<=', endDate),
-          orderBy('date', 'asc')
+          where('date', '<=', endDate)
         )
       );
+
+      // Sort by date ascending
+      const logs = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
 
       // Group by date, count arrivals
       const counts = {};
       days.forEach(d => { counts[d] = { arrivals: 0, departures: 0 }; });
-      snap.forEach(doc => {
-        const l = doc.data();
+      logs.forEach(l => {
         if (!counts[l.date]) counts[l.date] = { arrivals: 0, departures: 0 };
         if (l.status === 'arrived' || l.arrivalTime) counts[l.date].arrivals++;
         if (l.status === 'departed' || l.departureTime) counts[l.date].departures++;

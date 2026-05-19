@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import {
   collection, query, where, getDocs, addDoc, updateDoc, deleteDoc,
-  doc, serverTimestamp, orderBy,
+  doc, serverTimestamp,
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -29,11 +29,17 @@ export default function Groups() {
     try {
       const q = query(
         collection(db, 'groups'),
-        where('userId', '==', currentUser.uid),
-        orderBy('createdAt', 'desc')
+        where('userId', '==', currentUser.uid)
       );
       const snap = await getDocs(q);
-      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort by createdAt descending
+      data.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis?.() || 0;
+        const timeB = b.createdAt?.toMillis?.() || 0;
+        return timeB - timeA;
+      });
+      setGroups(data);
     } catch (e) {
       console.error(e);
       toast.error('Erreur de chargement');

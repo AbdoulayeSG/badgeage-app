@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import {
-  collection, query, where, getDocs, orderBy,
+  collection, query, where, getDocs,
 } from 'firebase/firestore';
 import { Calendar as CalIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -60,11 +60,13 @@ export default function CalendarPage() {
           collection(db, 'attendanceLogs'),
           where('userId', '==', currentUser.uid),
           where('date', '>=', start),
-          where('date', '<=', end),
-          orderBy('date', 'asc')
+          where('date', '<=', end)
         )
       );
-      setLogs(lSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const logs = lSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort by date ascending
+      logs.sort((a, b) => a.date.localeCompare(b.date));
+      setLogs(logs);
     } catch (e) {
       console.error(e);
     } finally {
