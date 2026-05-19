@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/scanner',     icon: QrCode,           label: 'Scanner QR'      },
   { to: '/calendar',    icon: Calendar,         label: 'Calendrier'      },
   { to: '/statistics',  icon: BarChart2,        label: 'Statistiques'    },
+  { to: '/attendances', icon: Users,            label: 'Présences'       },
 ];
 
 export default function Layout({ children }) {

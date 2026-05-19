@@ -30,6 +30,8 @@ export default function CalendarPage() {
   const [month, setMonth] = useState(now.getMonth());
   const [logs,  setLogs]  = useState([]);           // all logs for this month
   const [people, setPeople] = useState({});          // id -> name
+  const [groups, setGroups] = useState([]);          // all groups
+  const [selectedGroup, setSelectedGroup] = useState(null);  // selected group filter
   const [selected, setSelected] = useState(null);   // selected date string YYYY-MM-DD
   const [loading, setLoading]   = useState(true);
 
@@ -38,6 +40,22 @@ export default function CalendarPage() {
     const m = String(month + 1).padStart(2, '0');
     const dd = String(d).padStart(2, '0');
     return `${year}-${m}-${dd}`;
+  };
+
+  // Load groups first
+  const loadGroups = async () => {
+    try {
+      const gSnap = await getDocs(
+        query(collection(db, 'groups'), where('userId', '==', currentUser.uid))
+      );
+      const groupList = gSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setGroups(groupList);
+      if (groupList.length > 0 && !selectedGroup) {
+        setSelectedGroup(groupList[0].id);
+      }
+    } catch (e) {
+      console.error('Load groups error:', e);
+    }
   };
 
   const load = async () => {
@@ -63,7 +81,14 @@ export default function CalendarPage() {
           where('date', '<=', end)
         )
       );
-      const logs = lSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      let logs = lSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Filter by selected group if any
+      if (selectedGroup) {
+        const groupPeopleIds = Object.keys(pMap).filter(id => pMap[id].groupId === selectedGroup);
+        logs = logs.filter(l => groupPeopleIds.includes(l.personId));
+      }
+      
       // Sort by date ascending
       logs.sort((a, b) => a.date.localeCompare(b.date));
       setLogs(logs);
@@ -74,7 +99,8 @@ export default function CalendarPage() {
     }
   };
 
-  useEffect(() => { load(); }, [year, month]);
+  useEffect(() => { loadGroups(); }, [currentUser]);
+  useEffect(() => { load(); }, [year, month, selectedGroup]);
 
   // Navigate months
   const prevMonth = () => {
@@ -107,6 +133,31 @@ export default function CalendarPage() {
           Cliquez sur un jour pour voir les présences
         </p>
       </div>
+
+      {/* Group filter */}
+      {groups.length > 0 && (
+        <div className="card">
+          <label className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+            Filtrer par groupe
+          </label>
+          <select
+            value={selectedGroup || ''}
+            onChange={(e) => setSelectedGroup(e.target.value)}
+            className="mt-2 w-full px-3 py-2 rounded-lg border"
+            style={{
+              borderColor: 'var(--border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-main)',
+            }}
+          >
+            {groups.map(g => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="card">
         {/* Month navigation */}

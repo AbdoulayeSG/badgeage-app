@@ -14,13 +14,43 @@ import { BarChart2, Calendar } from 'lucide-react';
 
 export default function Statistics() {
   const { currentUser } = useAuth();
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [data,    setData]    = useState([]);
   const [loading, setLoading] = useState(true);
   const [range,   setRange]   = useState(30); // days to show
 
+  // Load groups
+  const loadGroups = async () => {
+    try {
+      const gSnap = await getDocs(
+        query(collection(db, 'groups'), where('userId', '==', currentUser.uid))
+      );
+      const groupList = gSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setGroups(groupList);
+      if (groupList.length > 0) {
+        setSelectedGroup(groupList[0].id);
+      }
+    } catch (e) {
+      console.error('Load groups error:', e);
+    }
+  };
+
+  useEffect(() => { loadGroups(); }, [currentUser]);
+
   const load = async () => {
+    if (!selectedGroup) return;
     setLoading(true);
     try {
+      // Get people in selected group
+      const pSnap = await getDocs(
+        query(collection(db, 'people'), where('userId', '==', currentUser.uid))
+      );
+      const groupPeople = pSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => p.groupId === selectedGroup);
+      const groupPersonIds = new Set(groupPeople.map(p => p.id));
+
       // Build last N days
       const days = [];
       for (let i = range - 1; i >= 0; i--) {
@@ -42,8 +72,11 @@ export default function Statistics() {
         )
       );
 
-      // Sort by date ascending
-      const logs = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
+      // Sort by date ascending and filter by group
+      const logs = snap.docs
+        .map(d => d.data())
+        .filter(l => groupPersonIds.has(l.personId))
+        .sort((a, b) => a.date.localeCompare(b.date));
 
       // Group by date, count arrivals
       const counts = {};
@@ -69,7 +102,7 @@ export default function Statistics() {
     }
   };
 
-  useEffect(() => { load(); }, [range]);
+  useEffect(() => { load(); }, [selectedGroup, range]);
 
   const total      = data.reduce((s, d) => s + d.présents, 0);
   const peak       = Math.max(...data.map(d => d.présents));
@@ -78,14 +111,13 @@ export default function Statistics() {
 
   return (
     <div className="fade-up space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>Statistiques</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
             Fréquentation et tendances de présence
           </p>
         </div>
-        {/* Range selector */}
         <div className="flex gap-2">
           {[7, 14, 30].map(r => (
             <button key={r} onClick={() => setRange(r)}
@@ -95,6 +127,29 @@ export default function Statistics() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Group filter */}
+      <div className="card">
+        <label className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+          Filtrer par groupe
+        </label>
+        <select
+          value={selectedGroup || ''}
+          onChange={(e) => setSelectedGroup(e.target.value)}
+          className="mt-2 w-full px-3 py-2 rounded-lg border"
+          style={{
+            borderColor: 'var(--border)',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-main)',
+          }}
+        >
+          {groups.map(g => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Summary cards */}

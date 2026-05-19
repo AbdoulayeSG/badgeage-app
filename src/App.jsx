@@ -15,6 +15,7 @@ import People     from './pages/People';
 import Scanner    from './pages/Scanner';
 import Calendar   from './pages/Calendar';
 import Statistics from './pages/Statistics';
+import Attendances from './pages/Attendances';
 
 export default function App() {
   return (
@@ -67,6 +68,11 @@ export default function App() {
           <Route path="/statistics" element={
             <ProtectedRoute>
               <Layout><Statistics /></Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/attendances" element={
+            <ProtectedRoute>
+              <Layout><Attendances /></Layout>
             </ProtectedRoute>
           } />
 
