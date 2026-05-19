@@ -74,17 +74,19 @@ export default function Scanner() {
       const person    = { id: personDoc.id, ...personDoc.data() };
       const today     = todayStr();
 
-      // Check if already has logs today for this person
+      // Check if already has logs today for this person - load all logs for this person
       const logSnap = await getDocs(
         query(
           collection(db, 'attendanceLogs'),
-          where('personId', '==', person.id),
-          where('date', '==', today)
+          where('personId', '==', person.id)
         )
       );
       
-      // Find if there's an "arrived" status log
-      const arrivedLog = logSnap.docs.find(d => d.data().status === 'arrived');
+      // Filter by today's date and find "arrived" status
+      const arrivedLog = logSnap.docs.find(d => {
+        const data = d.data();
+        return data.date === today && data.status === 'arrived';
+      });
 
       if (!arrivedLog) {
         // First scan today → record arrival
